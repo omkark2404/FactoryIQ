@@ -8,10 +8,11 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import classification_report, roc_auc_score
 from sklearn.utils.class_weight import compute_class_weight
 
-from app.config import DATA_DIR, RISK_MODEL_DIR
+from app.config import DATA_DIR, RISK_MODEL_DIR, setup_seeds, RANDOM_SEED
 
 def train_quality_risk_model():
     """Trains classical ML model to predict quality rejection risk and defect rate."""
+    setup_seeds()
     os.makedirs(RISK_MODEL_DIR, exist_ok=True)
     data_path = DATA_DIR / "synthetic" / "production_data.csv"
     print(f"[ML Train] Loading production dataset from '{data_path}'...")
@@ -47,12 +48,12 @@ def train_quality_risk_model():
     # Create Sklearn Pipelines
     clf_pipeline = Pipeline([
         ('scaler', StandardScaler()),
-        ('classifier', RandomForestClassifier(n_estimators=50, random_state=42, class_weight=class_weight))
+        ('classifier', RandomForestClassifier(n_estimators=50, random_state=RANDOM_SEED, class_weight=class_weight))
     ])
 
     reg_pipeline = Pipeline([
         ('scaler', StandardScaler()),
-        ('regressor', RandomForestRegressor(n_estimators=50, random_state=42))
+        ('regressor', RandomForestRegressor(n_estimators=50, random_state=RANDOM_SEED))
     ])
 
     print("[ML Train] Performing TimeSeries Cross-Validation...")

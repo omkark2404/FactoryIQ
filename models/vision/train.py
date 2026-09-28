@@ -10,9 +10,10 @@ except Exception as e:
     HAS_TORCH = False
 from models.vision.dataset import MVTecDataset, get_vision_transforms
 from models.vision.model import IndustrialAnomalyDetector
-from app.config import VISION_MODEL_DIR, DATA_DIR
+from app.config import VISION_MODEL_DIR, DATA_DIR, setup_seeds
 
 def train_anomaly_model(epochs: int = 5, batch_size: int = 16):
+    setup_seeds()
     os.makedirs(VISION_MODEL_DIR, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[Vision Train] Using device: {device}")
