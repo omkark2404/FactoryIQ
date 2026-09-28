@@ -24,6 +24,8 @@ models/quality_risk_model/*.pkl
 vector_store/*.json
 vector_store/*.bin
 vector_store/*.index
+vector_store/*.npy
+vector_store_test/
 
 # Jupyter Notebook Checkpoints
 .ipynb_checkpoints/

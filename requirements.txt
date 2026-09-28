@@ -17,6 +17,7 @@ pytesseract>=0.3.10
 # NLP, Embeddings & RAG
 sentence-transformers>=2.2.2
 faiss-cpu>=1.7.4
+google-generativeai>=0.8.0
 
 # API & Backend
 fastapi>=0.95.0
