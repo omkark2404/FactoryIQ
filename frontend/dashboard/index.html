@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FactoryIQ — Manufacturing Quality Intelligence</title>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: #1e293b;
+      --border-color: #334155;
+      --accent-blue: #38bdf8;
+      --accent-red: #f87171;
+      --accent-green: #4ade80;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: var(--bg-dark); color: var(--text-main); padding: 2rem; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 1.5rem; }
+    header { border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; text-align: center; }
+    header h1 { font-size: 2rem; color: var(--accent-blue); letter-spacing: 1px; }
+    header p { color: var(--text-muted); font-size: 0.95rem; margin-top: 0.3rem; }
+    
+    .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+
+    .metric-box { background: #0f172a; border-radius: 8px; padding: 1rem; text-align: center; border: 1px solid var(--border-color); }
+    .metric-title { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-value { font-size: 1.4rem; font-weight: bold; margin-top: 0.4rem; }
+    .text-red { color: var(--accent-red); }
+    .text-green { color: var(--accent-green); }
+    .text-blue { color: var(--accent-blue); }
+
+    .category-selector { margin-bottom: 1rem; display: flex; gap: 0.5rem; align-items: center; }
+    select, button, input[type="text"], input[type="file"] {
+      background: #0f172a; color: var(--text-main); border: 1px solid var(--border-color);
+      padding: 0.6rem 1rem; border-radius: 6px; font-size: 0.95rem; outline: none;
+    }
+    select:focus, input[type="text"]:focus { border-color: var(--accent-blue); }
+    button { background: var(--accent-blue); color: #000; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    button:hover { opacity: 0.9; }
+
+    .sources-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+    .source-badge { background: #0284c7; color: #fff; padding: 0.35rem 0.75rem; border-radius: 16px; font-size: 0.82rem; font-weight: 600; display: flex; align-items: center; gap: 0.4rem; }
+
+    .answer-box { background: #0f172a; border-left: 4px solid var(--accent-blue); padding: 1rem; border-radius: 0 8px 8px 0; line-height: 1.6; margin-top: 1rem; white-space: pre-wrap; }
+    .status-msg { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>FACTORYIQ</h1>
+    <p>AI-Powered Manufacturing Quality Intelligence System</p>
+  </header>
+
+  <!-- Live Batch Intelligence Overview -->
+  <div class="card">
+    <div class="category-selector">
+      <label for="categorySelect"><strong>Inspection Target Category:</strong></label>
+      <select id="categorySelect" onchange="runAnalysis()">
+        <option value="bottle" selected>Bottle (Surface / Shape Defects)</option>
+        <option value="screw">Screw (Manufacturing Defects)</option>
+        <option value="metal_nut">Metal Nut (Component Defects)</option>
+        <option value="tile">Tile (Texture Defects)</option>
+      </select>
+      <button onclick="runAnalysis()">Refresh Analysis</button>
+    </div>
+
+    <div class="grid-3" style="margin-top: 1rem;">
+      <div class="metric-box">
+        <div class="metric-title">Batch / Machine</div>
+        <div class="metric-value text-blue" id="batchMachine">RB-2041 / Press-04</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Defect Risk</div>
+        <div class="metric-value text-red" id="riskLevel">HIGH 78%</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">Vision Inspection</div>
+        <div class="metric-value text-red" id="visionResult">ANOMALY (91%)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Upload (OCR Pipeline) -->
+  <div class="card">
+    <h3>📄 Upload Inspection PDF / Report</h3>
+    <div style="display: flex; gap: 1rem; margin-top: 0.8rem; align-items: center;">
+      <input type="file" id="fileUpload" accept=".pdf,.txt,.png,.jpg" style="flex: 1;" />
+      <button onclick="uploadDoc()">Upload & Ingest</button>
+    </div>
+    <div class="status-msg" id="uploadStatus">Ready to process document via OCR -> Cleaning -> Vector Storage.</div>
+  </div>
+
+  <!-- Ask FactoryIQ (RAG Assistant) -->
+  <div class="card">
+    <h3>🤖 Ask FactoryIQ Quality Assistant</h3>
+    <div style="display: flex; gap: 0.5rem; margin-top: 0.8rem;">
+      <input type="text" id="queryInput" value="Why was RB-2041 flagged?" style="flex: 1;" placeholder="Ask why batch was flagged, check SOPs..." />
+      <button onclick="askRAG()">Ask Assistant</button>
+    </div>
+
+    <div class="answer-box" id="answerDisplay">
+      Click "Ask Assistant" to retrieve grounded evidence across Inspection Reports, SOPs, and Historical Incidents.
+    </div>
+
+    <h4 style="margin-top: 1.2rem; font-size: 0.95rem; color: var(--text-muted);">Retrieved Sources & Evidence:</h4>
+    <div class="sources-list" id="sourcesDisplay">
+      <span class="source-badge">✓ Inspection Report RB-2041</span>
+      <span class="source-badge">✓ Press-04 SOP</span>
+      <span class="source-badge">✓ Previous Incident #018</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function runAnalysis() {
+    const category = document.getElementById("categorySelect").value;
+    try {
+      const res = await fetch(`/api/analyze/batch/RB-2041?category=${category}`);
+      const data = await res.json();
+      
+      document.getElementById("batchMachine").innerText = `${data.batch_id} / ${data.machine_id}`;
+      document.getElementById("riskLevel").innerText = `${data.risk_prediction.risk_level} ${data.risk_prediction.rejection_risk_pct}%`;
+      document.getElementById("visionResult").innerText = `${data.vision_result.result} (${data.vision_result.confidence_pct}%)`;
+      
+      displayRAG(data.rag_synthesis);
+    } catch (err) {
+      console.error("API error:", err);
+    }
+  }
+
+  async function askRAG() {
+    const question = document.getElementById("queryInput").value;
+    const category = document.getElementById("categorySelect").value;
+    try {
+      const res = await fetch('/api/rag/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: question, category: category, batch_id: "RB-2041" })
+      });
+      const data = await res.json();
+      displayRAG(data);
+    } catch (err) {
+      document.getElementById("answerDisplay").innerText = "Error contacting RAG backend.";
+    }
+  }
+
+  function displayRAG(ragData) {
+    document.getElementById("answerDisplay").innerText = ragData.answer;
+    const sourcesContainer = document.getElementById("sourcesDisplay");
+    sourcesContainer.innerHTML = "";
+    ragData.sources.forEach(src => {
+      const span = document.createElement("span");
+      span.className = "source-badge";
+      span.innerText = `✓ ${src.title}`;
+      sourcesContainer.appendChild(span);
+    });
+  }
+
+  async function uploadDoc() {
+    const fileInput = document.getElementById("fileUpload");
+    if (!fileInput.files.length) {
+      alert("Please select a file to upload.");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    document.getElementById("uploadStatus").innerText = "Ingesting document via OCR...";
+    try {
+      const res = await fetch('/api/rag/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      document.getElementById("uploadStatus").innerText = data.message || "Upload complete!";
+    } catch (err) {
+      document.getElementById("uploadStatus").innerText = "Failed to upload document.";
+    }
+  }
+
+  // Initial load
+  runAnalysis();
+</script>
+
+</body>
+</html>

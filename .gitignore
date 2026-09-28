@@ -1,0 +1,40 @@
+# Python / Virtual Environment
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Environment Variables
+.env
+*.env
+
+# Data & Models
+data/raw/mvtec/*
+!data/raw/mvtec/README.md
+data/processed/*
+!data/processed/.gitkeep
+models/vision_model/*.pth
+models/vision_model/*.pt
+models/quality_risk_model/*.pkl
+vector_store/*.json
+vector_store/*.bin
+vector_store/*.index
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

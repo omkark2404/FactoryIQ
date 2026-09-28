@@ -1,0 +1,23 @@
+Document Type: Quality Manual
+Document ID: QM-2026-V4
+Title: Standard Quality Management & Defect Escalation Guidelines
+
+1. Purpose and Scope
+This document outlines standard quality inspection thresholds, defect classification standards, and mandatory escalation protocols across all production lines including Bottle, Screw, Metal Nut, and Tile molding processes.
+
+2. Temperature Control & Defect Thresholds
+- Standard operating temperature range for Press series machines (Press-01 to Press-04) is 165°C to 178°C.
+- Operating temperatures exceeding 180°C present a critical thermal risk. Elevated temperatures induce material thermal expansion, localized stress, and surface cracking.
+- If a press machine operates above 180°C for more than 10 consecutive minutes, the current production batch MUST be flagged for immediate visual anomaly inspection.
+
+3. Defect Classification Standard
+- Surface Anomaly / Micro-cracks: High Severity. Triggers mandatory batch quarantine if defect rate exceeds 1.5%.
+- Dimensional Abnormality: Medium Severity. Requires calibration check of hydraulic pressure clamps.
+- Texture Deviation: Low Severity. Standard surface finish inspection required.
+
+4. Escalation Protocol
+When a batch is flagged with HIGH Risk (Rejection Risk > 70% or Anomaly Score > 0.85):
+Step 1: Halt automated packaging for the batch.
+Step 2: Cross-reference machine operating temperature against SOP.
+Step 3: Review historical incident logs for the active machine ID.
+Step 4: Conduct visual sampling using the automated vision inspection system on at least 50 random units.
