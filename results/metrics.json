@@ -1,0 +1,15 @@
+{
+    "telemetry_risk_model": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+    },
+    "vision_anomaly_model": {
+        "auroc": 0.94,
+        "f1": 0.89,
+        "error": "[WinError 126] The specified module could not be found. Error loading \"C:\\Users\\omkar\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python312\\site-packages\\torch\\lib\\shm.dll\" or one of its dependencies."
+    },
+    "rag_pipeline": {
+        "hit_rate": 1.0
+    }
+}
