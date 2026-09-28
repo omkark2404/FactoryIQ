@@ -1,5 +1,0 @@
-incident_id,date,machine_id,batch_id,defect_type,operating_temp_c,severity,root_cause_summary,corrective_action
-INC-018,2026-08-14,Press-04,RB-1988,Surface Crack,185.2,HIGH,Elevated operating temperature exceeding 180°C caused material thermal expansion and micro-fracturing during molding cycle.,Recalibrate thermal sensors and mandate visual QA when operating above 180°C.
-INC-012,2026-07-22,Press-04,RB-1920,Surface Crack,183.9,HIGH,Overheating of heat injection nozzle resulting in thermal stress cracks on container surface.,Replaced nozzle heating coil and updated SOP threshold alert.
-INC-009,2026-06-11,Press-02,RB-1850,Dimensional Distortion,176.5,MEDIUM,Hydraulic pressure drop during clamping phase.,Replaced hydraulic valve seal.
-INC-004,2026-05-03,Press-01,RB-1740,Micro Abrasion,172.1,LOW,Contamination in raw material hopper.,Cleaned hopper feed lines.
