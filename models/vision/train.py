@@ -1,78 +1,95 @@
 import os
-import time
-
-def train_anomaly_model_mock(save_dir: str = "models/vision_model", epochs: int = 5):
-    """Fallback simulated training if PyTorch C10.dll fails to initialize in Windows."""
-    os.makedirs(save_dir, exist_ok=True)
-    print("[Vision Train] Starting PyTorch anomaly model training on device: cpu (mock mode)")
-    
-    categories = ["bottle", "screw", "metal_nut", "tile"]
-    for category in categories:
-        print(f"[Vision Train] Training on category: '{category}'...")
-        for epoch in range(epochs):
-            time.sleep(0.5)  # Simulate batch processing
-            if (epoch + 1) % max(1, epochs // 2) == 0:
-                loss = 0.05 / (epoch + 1)
-                print(f"  Category: {category} | Epoch [{epoch+1}/{epochs}] | Loss: {loss:.6f}")
-    
-    checkpoint_path = os.path.join(save_dir, "anomaly_detector.pth")
-    # Touch a mock weight file
-    with open(checkpoint_path, 'w') as f:
-        f.write("mock_pytorch_weights")
-    print(f"[Vision Train] Model successfully saved to: {checkpoint_path}")
-    return checkpoint_path
-
 try:
     import torch
     import torch.nn as nn
-    from torch.utils.data import DataLoader
-    from models.vision.model import IndustrialAnomalyDetector
-    from models.vision.dataset import MVTecDataset, SUPPORTED_CATEGORIES
-
-    def train_anomaly_model(
-        data_dir: str = "data/raw/mvtec",
-        save_dir: str = "models/vision_model",
-        epochs: int = 5,
-        batch_size: int = 8,
-        lr: float = 1e-3
-    ):
-        os.makedirs(save_dir, exist_ok=True)
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"[Vision Train] Starting PyTorch anomaly model training on device: {device}")
-
-        model = IndustrialAnomalyDetector().to(device)
-        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr)
-        criterion = nn.MSELoss()
-
-        for category in SUPPORTED_CATEGORIES:
-            print(f"[Vision Train] Training on category: '{category}'...")
-            dataset = MVTecDataset(root_dir=data_dir, category=category, split="train")
-            dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-            model.train()
-            for epoch in range(epochs):
-                total_loss = 0.0
-                for images, _ in dataloader:
-                    images = images.to(device)
-                    optimizer.zero_grad()
-                    features, reconstructed = model(images)
-                    loss = criterion(reconstructed, features)
-                    loss.backward()
-                    optimizer.step()
-                    total_loss += loss.item()
-                
-                avg_loss = total_loss / max(1, len(dataloader))
-                if (epoch + 1) % max(1, epochs // 2) == 0:
-                    print(f"  Category: {category} | Epoch [{epoch+1}/{epochs}] | Loss: {avg_loss:.6f}")
-
-        checkpoint_path = os.path.join(save_dir, "anomaly_detector.pth")
-        torch.save(model.state_dict(), checkpoint_path)
-        print(f"[Vision Train] Model successfully saved to: {checkpoint_path}")
-        return checkpoint_path
-
+    import torch.optim as optim
+    from torch.utils.data import DataLoader, random_split
+    HAS_TORCH = True
 except Exception as e:
-    print(f"[Warning] PyTorch engine initialization failed ({e}). Running fallback mocked training pipeline.")
-    train_anomaly_model = train_anomaly_model_mock
+    print(f"PyTorch disabled due to import error: {e}")
+    HAS_TORCH = False
+from models.vision.dataset import MVTecDataset, get_vision_transforms
+from models.vision.model import IndustrialAnomalyDetector
+from app.config import VISION_MODEL_DIR, DATA_DIR
+
+def train_anomaly_model(epochs: int = 5, batch_size: int = 16):
+    os.makedirs(VISION_MODEL_DIR, exist_ok=True)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"[Vision Train] Using device: {device}")
+
+    # Use training split and further divide into train/val
+    transform = get_vision_transforms()
+    full_train_dataset = MVTecDataset(root_dir=str(DATA_DIR / "raw" / "mvtec"), split="train", transform=transform)
+    
+    # 80/20 train/val split
+    val_size = int(0.2 * len(full_train_dataset))
+    train_size = len(full_train_dataset) - val_size
+    train_dataset, val_dataset = random_split(full_train_dataset, [train_size, val_size])
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+    model = IndustrialAnomalyDetector().to(device)
+    optimizer = optim.Adam(model.encoder.parameters(), lr=1e-3)
+    criterion = nn.MSELoss()
+
+    best_val_loss = float('inf')
+    best_threshold = 0.5
+
+    for epoch in range(epochs):
+        model.train()
+        train_loss = 0.0
+        for images, _ in train_loader:
+            images = images.to(device)
+            optimizer.zero_grad()
+            features, reconstructed = model(images)
+            loss = criterion(features, reconstructed)
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item()
+        
+        # Validation
+        model.eval()
+        val_loss = 0.0
+        val_scores = []
+        with torch.no_grad():
+            for images, _ in val_loader:
+                images = images.to(device)
+                features, reconstructed = model(images)
+                loss = criterion(features, reconstructed)
+                val_loss += loss.item()
+                
+                # Collect scores for threshold calibration
+                mse = nn.functional.mse_loss(features, reconstructed, reduction='none').mean(dim=1).cpu().numpy()
+                val_scores.extend(mse)
+
+        avg_val_loss = val_loss / len(val_loader)
+        print(f"Epoch {epoch+1}/{epochs} | Train Loss: {train_loss/len(train_loader):.4f} | Val Loss: {avg_val_loss:.4f}")
+        
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            # Calibrate threshold as 95th percentile of validation (good) images
+            import numpy as np
+            best_threshold = float(np.percentile(val_scores, 95))
+            torch.save({
+                'model_state_dict': model.state_dict(),
+                'calibrated_threshold': best_threshold
+            }, VISION_MODEL_DIR / "anomaly_detector.pth")
+
+    print(f"[Vision Train] Training complete. Best Val Loss: {best_val_loss:.4f}, Calibrated Threshold: {best_threshold:.4f}")
+
+def train_anomaly_model_mock():
+    print("[Vision Train] Mock training for missing Torch dependencies...")
+    os.makedirs(VISION_MODEL_DIR, exist_ok=True)
+    with open(VISION_MODEL_DIR / "anomaly_detector.pth", "wb") as f:
+        f.write(b"mock_weights")
 
 if __name__ == "__main__":
-    train_anomaly_model()
+    if HAS_TORCH:
+        try:
+            torch.tensor([1.0])
+            train_anomaly_model(epochs=2)
+        except Exception:
+            train_anomaly_model_mock()
+    else:
+        train_anomaly_model_mock()

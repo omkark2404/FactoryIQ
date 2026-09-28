@@ -1,4 +1,3 @@
-from app.config import DATA_DIR, RISK_MODEL_DIR, VISION_MODEL_DIR, VECTOR_STORE_DIR
 import os
 from PIL import Image
 
@@ -12,18 +11,27 @@ except Exception as e:
 
 from models.vision.model import IndustrialAnomalyDetector
 from models.vision.dataset import get_vision_transforms, generate_synthetic_inspection_image, SUPPORTED_CATEGORIES
+from app.config import VISION_MODEL_DIR
 
 class VisionPredictor:
     """Inference predictor engine for industrial defect inspection."""
-    def __init__(self, model_path: str = os.path.join(str(VISION_MODEL_DIR), "anomaly_detector.pth")):
+    def __init__(self, model_path=None):
+        if model_path is None:
+            model_path = VISION_MODEL_DIR / "anomaly_detector.pth"
+        
+        self.threshold = 0.65 # Default fallback
         if HAS_TORCH:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self.transform = get_vision_transforms()
             self.model = IndustrialAnomalyDetector().to(self.device)
             if os.path.exists(model_path):
                 try:
-                    self.model.load_state_dict(torch.load(model_path, map_location=self.device))
-                    print(f"[VisionPredictor] Loaded model weights from {model_path}")
+                    checkpoint = torch.load(model_path, map_location=self.device)
+                    if 'model_state_dict' in checkpoint:
+                        self.model.load_state_dict(checkpoint['model_state_dict'])
+                    if 'calibrated_threshold' in checkpoint:
+                        self.threshold = checkpoint['calibrated_threshold']
+                    print(f"[VisionPredictor] Loaded model weights and threshold ({self.threshold:.4f})")
                 except Exception as e:
                     print(f"[VisionPredictor] Notice: Could not load weights ({e}). Running baseline weights.")
             self.model.eval()
@@ -41,7 +49,7 @@ class VisionPredictor:
         else:
             anomaly_score = 0.91
 
-        is_anomaly = anomaly_score >= 0.65
+        is_anomaly = anomaly_score >= self.threshold
         status = "ANOMALY" if is_anomaly else "NORMAL"
         confidence = round(anomaly_score * 100 if is_anomaly else (1 - anomaly_score) * 100, 1)
         
@@ -72,7 +80,7 @@ class VisionPredictor:
         res = self.predict_image(synthetic_img, category=category)
         if force_defect and res["result"] == "NORMAL":
             res["result"] = "ANOMALY"
-            res["anomaly_score"] = 0.91
-            res["confidence_pct"] = 91.0
+            res["anomaly_score"] = self.threshold + 0.1
+            res["confidence_pct"] = min(100.0, (res["anomaly_score"]) * 100)
             res["status_message"] = f"⚠️ Surface anomaly detected ({category.title()}). Requires quality inspection."
         return res

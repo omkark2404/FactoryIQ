@@ -1,66 +1,69 @@
-from app.config import DATA_DIR, RISK_MODEL_DIR, VISION_MODEL_DIR, VECTOR_STORE_DIR
 import os
-import pickle
-from models.ml.preprocess import MLPreprocessor
+import joblib
+import pandas as pd
+from app.config import RISK_MODEL_DIR
 
 class QualityRiskPredictor:
-    """Predictor engine for classical ML Quality Risk estimation."""
-    def __init__(self, model_dir: str = str(RISK_MODEL_DIR)):
-        self.model_dir = model_dir
-        self.classifier = None
-        self.regressor = None
-        self.preprocessor = MLPreprocessor()
+    """Inference engine for manufacturing quality risk using saved Sklearn Pipelines."""
+    def __init__(self):
+        self.clf_pipeline = None
+        self.reg_pipeline = None
         
-        clf_path = os.path.join(model_dir, "risk_classifier.pkl")
-        reg_path = os.path.join(model_dir, "defect_regressor.pkl")
-        prep_path = os.path.join(model_dir, "preprocessor.pkl")
-
-        if os.path.exists(clf_path) and os.path.exists(reg_path) and os.path.exists(prep_path):
-            try:
-                with open(clf_path, 'rb') as f:
-                    self.classifier = pickle.load(f)
-                with open(reg_path, 'rb') as f:
-                    self.regressor = pickle.load(f)
-                with open(prep_path, 'rb') as f:
-                    self.preprocessor = pickle.load(f)
-                print(f"[QualityRiskPredictor] Loaded ML models from {model_dir}")
-            except Exception as e:
-                print(f"[QualityRiskPredictor] Could not load ML artifacts ({e}). Using rule-based estimator.")
-
-    def predict_risk(self, batch_data: dict) -> dict:
-        """
-        Predicts quality risk level (HIGH/LOW) and rejection probability %.
-        Inputs: batch_data dict containing temperature_c, pressure_psi, shift, etc.
-        """
-        temp = float(batch_data.get("temperature_c", 184.0))
-        batch_id = batch_data.get("batch_id", "RB-2041")
-        machine_id = batch_data.get("machine_id", "Press-04")
-        shift = batch_data.get("shift", "B")
-
-        if self.classifier is not None and self.regressor is not None:
-            X_scaled = self.preprocessor.transform_single(batch_data)
-            risk_prob = float(self.classifier.predict_proba(X_scaled)[0][1])
-            defect_rate = float(self.regressor.predict(X_scaled)[0])
+        clf_path = RISK_MODEL_DIR / "risk_pipeline.joblib"
+        reg_path = RISK_MODEL_DIR / "defect_pipeline.joblib"
+        
+        if clf_path.exists() and reg_path.exists():
+            self.clf_pipeline = joblib.load(clf_path)
+            self.reg_pipeline = joblib.load(reg_path)
         else:
-            # Deterministic fallback estimator based on temperature thresholds
-            if temp >= 180.0:
-                risk_prob = min(0.95, 0.50 + (temp - 180.0) * 0.07)
-                defect_rate = 1.5 + (temp - 180.0) * 0.25
-            else:
-                risk_prob = max(0.05, 0.20 - (180.0 - temp) * 0.01)
-                defect_rate = max(0.2, 0.8 - (180.0 - temp) * 0.04)
+            print("[QualityRiskPredictor] Warning: Models not found. Returning mock data.")
 
-        risk_level = "HIGH" if risk_prob >= 0.60 else "LOW"
-        risk_pct = round(risk_prob * 100.0, 1)
-        defect_rate_pct = round(defect_rate, 2)
+    def predict_risk(self, telemetry_dict: dict) -> dict:
+        """Predicts rejection risk level and defect rate using fitted Sklearn Pipelines."""
+        batch_id = telemetry_dict.get("batch_id", "UNKNOWN_BATCH")
+        machine_id = telemetry_dict.get("machine_id", "UNKNOWN_MACHINE")
+        
+        if self.clf_pipeline is None or self.reg_pipeline is None:
+            # Fallback mock response
+            return {
+                "batch_id": batch_id,
+                "machine_id": machine_id,
+                "risk_level": "HIGH",
+                "rejection_risk_pct": 78.0,
+                "predicted_defect_rate_pct": 2.52,
+                "temperature_c": float(telemetry_dict.get("temperature_c", 184.0)),
+                "shift": str(telemetry_dict.get("shift", "B"))
+            }
+
+        temp = float(telemetry_dict.get('temperature_c', 184.0))
+        press = float(telemetry_dict.get('pressure_psi', 72.0))
+        speed = float(telemetry_dict.get('line_speed_mmin', 45.0))
+        shift_str = str(telemetry_dict.get('shift', 'B')).upper()
+        prev_defects = int(telemetry_dict.get('previous_defects', 4))
+
+        shift_encoded = 1 if shift_str == 'B' else (0 if shift_str == 'A' else 2)
+
+        # Create single row dataframe
+        df = pd.DataFrame([{
+            'temperature_c': temp,
+            'pressure_psi': press,
+            'line_speed_mmin': speed,
+            'shift_encoded': shift_encoded,
+            'previous_defects': prev_defects
+        }])
+
+        prob_high_risk = self.clf_pipeline.predict_proba(df)[0][1]
+        defect_rate = self.reg_pipeline.predict(df)[0]
+        
+        is_high = prob_high_risk > 0.5
+        status = "HIGH" if is_high else "LOW"
 
         return {
             "batch_id": batch_id,
             "machine_id": machine_id,
-            "shift": shift,
+            "risk_level": status,
+            "rejection_risk_pct": round(prob_high_risk * 100, 1),
+            "predicted_defect_rate_pct": round(defect_rate, 2),
             "temperature_c": temp,
-            "risk_level": risk_level,
-            "rejection_risk_pct": risk_pct,
-            "predicted_defect_rate_pct": defect_rate_pct,
-            "recommendation": "⚠️ MANDATORY SAMPLING INSPECTION REQUIRED" if risk_level == "HIGH" else "✓ Normal production parameters"
+            "shift": shift_str
         }

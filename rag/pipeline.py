@@ -74,16 +74,21 @@ class RAGPipeline:
         # Vector Retrieval
         retrieved_chunks = self.retriever.retrieve(query, top_k=3)
         
-        # Build System Prompt
+        # Guardrail: Check if retrieval confidence is too low
+        # Assuming score is dot product (cosine similarity) where higher is better, or L2 where lower is better. 
+        # For safety, let's pass a guardrail instruction to the LLM directly via prompt.
         prompt = RAGPromptFormatter.build_quality_assistant_prompt(
             user_query=query,
             vision_res=vision_res,
             risk_res=risk_res,
             retrieved_chunks=retrieved_chunks
         )
+        
+        # Add strict guardrail to prompt
+        prompt += "\n\nCRITICAL RULE: If the retrieved documents do not contain the answer, explicitly state: 'The provided SOPs and incident reports do not contain enough information to answer this question.'"
 
         # Synthesize Grounded Answer (Local rule-based generator for offline reliability)
-        answer = self._generate_synthesized_answer(query, vision_res, risk_res, retrieved_chunks)
+        answer = self._generate_synthesized_answer(prompt, query, vision_res, risk_res, retrieved_chunks)
 
         # Format Source Citations
         sources = []
