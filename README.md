@@ -4,10 +4,23 @@ FactoryIQ is a full-stack ML system that monitors factory telemetry, detects vis
 
 ## Architecture
 
-*   **FastAPI Backend** (`app/`): Asynchronous API serving ML inference in threadpools.
-*   **Computer Vision** (`models/vision/`): PyTorch Autoencoder for anomaly detection trained on MVTec AD.
-*   **Machine Learning** (`models/ml/`): Scikit-learn RandomForest pipeline for time-series telemetry risk prediction.
-*   **RAG Engine** (`rag/`): FAISS vector store with SentenceTransformers and Gemini LLM synthesis.
+```mermaid
+graph TD
+    A[User / Frontend] -->|API Request| B(FastAPI Backend)
+    B --> C{ML Routers}
+    C -->|Images| D[PyTorch CV Model]
+    C -->|Sensor Data| E[Scikit-Learn Risk Model]
+    C -->|Queries| F[RAG FAISS Vector Store]
+    F --> G[Gemini LLM Synthesis]
+```
+
+## Screenshots & Demo
+<!-- TODO: Add the following screenshots to the docs/screenshots/ folder -->
+- **Dashboard Overview:** `docs/screenshots/dashboard.png` (Showing the main UI)
+- **Anomaly Detected:** `docs/screenshots/anomaly_alert.png` (Showing the CV model catching a defect)
+- **RAG Answer:** `docs/screenshots/rag_answer.png` (Showing the grounded LLM response)
+
+*Screenshots coming soon.*
 
 ## Dataset Notice
 *   **Visual Anomaly**: Uses the public [MVTec AD Dataset](https://www.mvtec.com/company/research/datasets/mvtec-ad).

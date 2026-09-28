@@ -1,8 +1,12 @@
 import os
+import logging
 from fastapi import FastAPI, Depends, HTTPException, Security
 from fastapi.security import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Global dictionary to store ML models
 ml_models = {}
@@ -18,7 +22,7 @@ async def get_api_key(api_key: str = Security(api_key_header)):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Load ML models globally
-    print("[FastAPI] Loading Machine Learning models into memory...")
+    logger.info("[FastAPI] Loading Machine Learning models into memory...")
     from models.vision.predict import VisionPredictor
     from models.ml.predict import QualityRiskPredictor
     from rag.pipeline import RAGPipeline
@@ -26,12 +30,12 @@ async def lifespan(app: FastAPI):
     ml_models["vision_predictor"] = VisionPredictor()
     ml_models["risk_predictor"] = QualityRiskPredictor()
     ml_models["rag_pipeline"] = RAGPipeline()
-    print("[FastAPI] Models loaded successfully.")
+    logger.info("[FastAPI] Models loaded successfully.")
     
     yield
     
     # Shutdown
-    print("[FastAPI] Shutting down and cleaning up models...")
+    logger.info("[FastAPI] Shutting down and cleaning up models...")
     ml_models.clear()
 
 app = FastAPI(
