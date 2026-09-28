@@ -32,18 +32,31 @@ async def predict_vision(req: VisionPredictionRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB limit
+
 @router.post("/predict/vision/upload", response_model=VisionPredictionResponse)
 async def predict_vision_upload(
     file: UploadFile = File(...),
     category: str = Form("bottle")
 ):
     """Run visual anomaly detection on uploaded inspection image file."""
+    if file.content_type not in ["image/jpeg", "image/png"]:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG/PNG are allowed.")
+    
     try:
         contents = await file.read()
+        if len(contents) > MAX_UPLOAD_SIZE:
+            raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
+            
+        import re
+        safe_filename = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', file.filename)
+        
         image = Image.open(io.BytesIO(contents)).convert("RGB")
         predictor = ml_models["vision_predictor"]
         res = await run_in_threadpool(predictor.predict_image, image, category=category)
         return VisionPredictionResponse(**res)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Image processing failed: {str(e)}")
 
@@ -60,20 +73,31 @@ async def predict_risk(req: RiskPredictionRequest):
 @router.post("/rag/upload")
 async def upload_document(file: UploadFile = File(...)):
     """Upload PDF/Text document, perform OCR extraction & ingest into RAG vector DB."""
+    if file.content_type not in ["application/pdf", "text/plain"]:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only PDF and Text allowed.")
+        
     try:
         content_bytes = await file.read()
+        if len(content_bytes) > MAX_UPLOAD_SIZE:
+            raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
+            
+        import re
+        safe_filename = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', file.filename)
+        
         try:
             text = content_bytes.decode('utf-8')
         except UnicodeDecodeError:
-            text = f"Inspection Report: {file.filename}\nBatch: RB-2041 Machine: Press-04 Temp: 184C Defect: Surface crack"
+            text = f"Inspection Report: {safe_filename}\nBatch: RB-2041 Machine: Press-04 Temp: 184C Defect: Surface crack"
             
         pipeline = ml_models["rag_pipeline"]
-        chunk_ids = await run_in_threadpool(pipeline.ingest_uploaded_document, text, file.filename)
+        chunk_ids = await run_in_threadpool(pipeline.ingest_uploaded_document, text, safe_filename)
         return {
             "status": "success",
-            "filename": file.filename,
+            "filename": safe_filename,
             "chunks_created": len(chunk_ids)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Document upload failed: {str(e)}")
 

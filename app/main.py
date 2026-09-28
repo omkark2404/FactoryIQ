@@ -1,9 +1,19 @@
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, Depends, HTTPException, Security
+from fastapi.security import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 # Global dictionary to store ML models
 ml_models = {}
+
+API_KEY = os.getenv("API_KEY", "")
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+async def get_api_key(api_key: str = Security(api_key_header)):
+    if API_KEY and api_key != API_KEY:
+        raise HTTPException(status_code=403, detail="Could not validate credentials")
+    return api_key
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,13 +38,17 @@ app = FastAPI(
     title="FactoryIQ API",
     description="Manufacturing Intelligence Backend",
     version="2.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    debug=os.getenv("DEBUG", "False").lower() == "true",
+    dependencies=[Depends(get_api_key)] if API_KEY else []
 )
+
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8000").split(",")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=allowed_origins,
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
