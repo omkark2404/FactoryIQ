@@ -107,29 +107,42 @@ class RAGPipeline:
 
     def _generate_synthesized_answer(
         self,
+        prompt: str,
         query: str,
         vision_res: dict,
         risk_res: dict,
         chunks: list[dict]
     ) -> str:
-        """Synthesizes high-fidelity domain response matching exact FactoryIQ output specification."""
-        batch_id = risk_res.get("batch_id", "RB-2041")
-        machine_id = risk_res.get("machine_id", "Press-04")
-        temp = risk_res.get("temperature_c", 184.0)
-        risk_pct = risk_res.get("rejection_risk_pct", 78.0)
+        """Synthesizes high-fidelity domain response using Google Gemini API or offline fallback."""
+        import os
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            # Deterministic fallback when offline
+            batch_id = risk_res.get("batch_id", "RB-2041")
+            machine_id = risk_res.get("machine_id", "Press-04")
+            temp = risk_res.get("temperature_c", 184.0)
+            risk_pct = risk_res.get("rejection_risk_pct", 78.0)
 
-        answer = (
-            f"Batch {batch_id} has been flagged because the visual inspection detected a surface anomaly "
-            f"(Confidence: {vision_res.get('confidence_pct', 91.0)}%) and the production model predicts a high "
-            f"rejection risk ({risk_pct}% risk level HIGH). The inspection records show {machine_id} operating "
-            f"at {temp}°C. The retrieved SOP indicates that temperatures above 180°C require mandatory visual inspection "
-            f"due to thermal expansion strain. A previous quality incident (INC-018) also recorded a similar surface crack "
-            f"defect under elevated temperature conditions (185.2°C) on {machine_id}.\n\n"
-            f"**Recommended Action for Quality Engineer:**\n"
-            f"1. Immediately inspect {machine_id} temperature control sensors and cooling lines.\n"
-            f"2. Quarantine the remaining units from batch {batch_id} for 100% visual defect sampling."
-        )
-        return answer
+            return (
+                f"**[OFFLINE MODE]** Set `GEMINI_API_KEY` in `.env` to enable dynamic AI responses.\n\n"
+                f"Batch {batch_id} has been flagged because the visual inspection detected a surface anomaly "
+                f"(Confidence: {vision_res.get('confidence_pct', 91.0)}%) and the production model predicts a high "
+                f"rejection risk ({risk_pct}% risk level HIGH). The inspection records show {machine_id} operating "
+                f"at {temp}°C. The retrieved SOP indicates that temperatures above 180°C require mandatory visual inspection "
+                f"due to thermal expansion strain.\n\n"
+                f"**Recommended Action for Quality Engineer:**\n"
+                f"1. Immediately inspect {machine_id} temperature control sensors and cooling lines.\n"
+                f"2. Quarantine the remaining units from batch {batch_id} for 100% visual defect sampling."
+            )
+        
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel("gemini-2.5-flash")
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            return f"**[LLM Error]**: {str(e)}\n\nPlease check your GEMINI_API_KEY configuration."
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
