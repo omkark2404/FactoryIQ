@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from src.rag.document_loader import Document
+from rag.document_loader import Document
 
 @dataclass
 class TextChunk:

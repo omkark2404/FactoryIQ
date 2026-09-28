@@ -1,10 +1,11 @@
+from app.config import DATA_DIR, RISK_MODEL_DIR, VISION_MODEL_DIR, VECTOR_STORE_DIR
 import os
 import pickle
-from src.ml.preprocess import MLPreprocessor
+from models.ml.preprocess import MLPreprocessor
 
 class QualityRiskPredictor:
     """Predictor engine for classical ML Quality Risk estimation."""
-    def __init__(self, model_dir: str = "models/quality_risk_model"):
+    def __init__(self, model_dir: str = str(RISK_MODEL_DIR)):
         self.model_dir = model_dir
         self.classifier = None
         self.regressor = None

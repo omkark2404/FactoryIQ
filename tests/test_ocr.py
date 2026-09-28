@@ -1,6 +1,6 @@
 import pytest
-from src.ocr.clean import OCRTextCleaner
-from src.ocr.parser import OCRDocumentParser
+from models.ocr.clean import OCRTextCleaner
+from models.ocr.parser import OCRDocumentParser
 
 def test_ocr_cleaner():
     raw = "Batch: RB-2041   Machine: Press-04   Operating Temp: 184 deg C\n\n\nRejected: 126"

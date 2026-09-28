@@ -1,15 +1,16 @@
+from app.config import DATA_DIR, RISK_MODEL_DIR, VISION_MODEL_DIR, VECTOR_STORE_DIR
 import os
 import argparse
-from src.rag.document_loader import DocumentLoader
-from src.rag.chunker import TextChunker
-from src.rag.vector_store import VectorStore
-from src.rag.retriever import RAGRetriever
-from src.rag.prompt import RAGPromptFormatter
-from src.rag.ocr_processor import OCRProcessor
+from rag.document_loader import DocumentLoader
+from rag.chunker import TextChunker
+from rag.vector_store import VectorStore
+from rag.retriever import RAGRetriever
+from rag.prompt import RAGPromptFormatter
+from rag.ocr_processor import OCRProcessor
 
 class RAGPipeline:
     """FactoryIQ End-to-End RAG Engine with source citation formatting."""
-    def __init__(self, vector_store_dir: str = "vector_store"):
+    def __init__(self, vector_store_dir: str = str(VECTOR_STORE_DIR)):
         self.loader = DocumentLoader()
         self.chunker = TextChunker()
         self.vector_store = VectorStore(persistence_dir=vector_store_dir)
@@ -21,7 +22,7 @@ class RAGPipeline:
 
         self.retriever = RAGRetriever(self.vector_store)
 
-    def ingest_default_documents(self, docs_dir: str = "data/raw/documents"):
+    def ingest_default_documents(self, docs_dir: str = os.path.join(str(DATA_DIR), "raw", "documents")):
         """Ingests default manufacturing SOPs, manuals & reports into vector database."""
         print(f"[RAGPipeline] Ingesting documents from '{docs_dir}'...")
         docs = self.loader.load_directory(docs_dir)

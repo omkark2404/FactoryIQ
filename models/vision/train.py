@@ -26,8 +26,8 @@ try:
     import torch
     import torch.nn as nn
     from torch.utils.data import DataLoader
-    from src.vision.model import IndustrialAnomalyDetector
-    from src.vision.dataset import MVTecDataset, SUPPORTED_CATEGORIES
+    from models.vision.model import IndustrialAnomalyDetector
+    from models.vision.dataset import MVTecDataset, SUPPORTED_CATEGORIES
 
     def train_anomaly_model(
         data_dir: str = "data/raw/mvtec",

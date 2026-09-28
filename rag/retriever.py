@@ -1,5 +1,5 @@
-from src.rag.vector_store import VectorStore
-from src.rag.chunker import TextChunk
+from rag.vector_store import VectorStore
+from rag.chunker import TextChunk
 
 class RAGRetriever:
     """Retriever engine fetching contextually relevant document chunks for user queries."""

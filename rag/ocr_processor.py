@@ -1,4 +1,4 @@
-from src.rag.document_loader import Document, DocumentLoader
+from rag.document_loader import Document, DocumentLoader
 
 class OCRProcessor:
     """Bridges raw OCR outputs directly into the RAG document format."""

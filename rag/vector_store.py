@@ -1,12 +1,13 @@
+from app.config import DATA_DIR, RISK_MODEL_DIR, VISION_MODEL_DIR, VECTOR_STORE_DIR
 import os
 import json
 import numpy as np
-from src.rag.chunker import TextChunk
-from src.rag.embeddings import EmbeddingGenerator
+from rag.chunker import TextChunk
+from rag.embeddings import EmbeddingGenerator
 
 class VectorStore:
     """Vector Database storing embedded text chunks with metadata search capabilities."""
-    def __init__(self, persistence_dir: str = "vector_store"):
+    def __init__(self, persistence_dir: str = str(VECTOR_STORE_DIR)):
         self.persistence_dir = persistence_dir
         self.embedding_gen = EmbeddingGenerator()
         self.chunks: list[TextChunk] = []

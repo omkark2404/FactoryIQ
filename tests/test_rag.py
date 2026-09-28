@@ -1,8 +1,8 @@
 import pytest
-from src.rag.document_loader import Document
-from src.rag.chunker import TextChunker
-from src.rag.vector_store import VectorStore
-from src.rag.pipeline import RAGPipeline
+from rag.document_loader import Document
+from rag.chunker import TextChunker
+from rag.vector_store import VectorStore
+from rag.pipeline import RAGPipeline
 
 def test_chunker():
     doc = Document(content="word " * 400, doc_id="test_doc", metadata={"document_type": "sop"})

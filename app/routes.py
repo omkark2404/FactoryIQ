@@ -2,15 +2,15 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from PIL import Image
 import io
 
-from src.api.schemas import (
+from app.schemas import (
     VisionPredictionRequest, VisionPredictionResponse,
     RiskPredictionRequest, RiskPredictionResponse,
     RAGQueryRequest, RAGQueryResponse,
     UnifiedBatchAnalysisResponse
 )
-from src.vision.predict import VisionPredictor
-from src.ml.predict import QualityRiskPredictor
-from src.rag.pipeline import RAGPipeline
+from models.vision.predict import VisionPredictor
+from models.ml.predict import QualityRiskPredictor
+from rag.pipeline import RAGPipeline
 
 router = APIRouter()
 

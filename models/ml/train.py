@@ -1,12 +1,13 @@
+from app.config import DATA_DIR, RISK_MODEL_DIR, VISION_MODEL_DIR, VECTOR_STORE_DIR
 import os
 import pickle
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from src.ml.preprocess import MLPreprocessor
+from models.ml.preprocess import MLPreprocessor
 
 def train_quality_risk_model(
-    data_path: str = "data/synthetic/production_data.csv",
-    save_dir: str = "models/quality_risk_model"
+    data_path: str = os.path.join(str(DATA_DIR), "synthetic", "production_data.csv"),
+    save_dir: str = str(RISK_MODEL_DIR)
 ):
     """Trains classical ML model to predict quality rejection risk and defect rate."""
     os.makedirs(save_dir, exist_ok=True)

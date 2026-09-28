@@ -1,3 +1,4 @@
+from app.config import DATA_DIR, RISK_MODEL_DIR, VISION_MODEL_DIR, VECTOR_STORE_DIR
 import os
 from PIL import Image
 
@@ -9,12 +10,12 @@ except Exception as e:
     HAS_TORCH = False
     torch = None
 
-from src.vision.model import IndustrialAnomalyDetector
-from src.vision.dataset import get_vision_transforms, generate_synthetic_inspection_image, SUPPORTED_CATEGORIES
+from models.vision.model import IndustrialAnomalyDetector
+from models.vision.dataset import get_vision_transforms, generate_synthetic_inspection_image, SUPPORTED_CATEGORIES
 
 class VisionPredictor:
     """Inference predictor engine for industrial defect inspection."""
-    def __init__(self, model_path: str = "models/vision_model/anomaly_detector.pth"):
+    def __init__(self, model_path: str = os.path.join(str(VISION_MODEL_DIR), "anomaly_detector.pth")):
         if HAS_TORCH:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self.transform = get_vision_transforms()

@@ -1,6 +1,6 @@
 import pytest
-from src.vision.predict import VisionPredictor
-from src.ml.predict import QualityRiskPredictor
+from models.vision.predict import VisionPredictor
+from models.ml.predict import QualityRiskPredictor
 
 def test_vision_predictor():
     predictor = VisionPredictor()

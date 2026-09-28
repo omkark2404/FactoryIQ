@@ -1,8 +1,8 @@
 import os
 from dataclasses import dataclass, field
-from src.ocr.extract import OCRExtractor
-from src.ocr.clean import OCRTextCleaner
-from src.ocr.parser import OCRDocumentParser
+from models.ocr.extract import OCRExtractor
+from models.ocr.clean import OCRTextCleaner
+from models.ocr.parser import OCRDocumentParser
 
 @dataclass
 class Document:

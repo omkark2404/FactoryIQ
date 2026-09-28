@@ -1,4 +1,4 @@
-from src.ocr.clean import OCRTextCleaner
+from models.ocr.clean import OCRTextCleaner
 
 class RAGTextCleaner(OCRTextCleaner):
     """Clean document text specifically tailored for RAG chunking."""
