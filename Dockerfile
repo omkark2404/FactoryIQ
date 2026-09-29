@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # Install system dependencies (e.g. for OpenCV, Tesseract)
 RUN apt-get update && apt-get install -y \
